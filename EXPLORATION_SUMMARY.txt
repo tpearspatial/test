@@ -1,0 +1,355 @@
+================================================================================
+              MEDIAPIPE UNITY PLUGIN - POSE LANDMARKER EXPLORATION
+                          COMPLETE SUMMARY REPORT
+================================================================================
+
+Exploration Date: November 7, 2025
+Repository: https://github.com/homuler/MediaPipeUnityPlugin
+Clone Location: /home/user/media-pipe-unity
+License: MIT
+
+================================================================================
+                         EXPLORATION FINDINGS
+================================================================================
+
+1. POSE LANDMARKER IMPLEMENTATION
+   - Complete pose detection system with 33 body landmarks
+   - Supports 3 running modes: IMAGE, VIDEO, LIVE_STREAM
+   - 3 model variants: Lite, Full, Heavy
+   - 3 image read modes: GPU, CPU, CPUAsync
+   - Optional segmentation mask output
+
+2. DATA STRUCTURES IDENTIFIED
+   - Landmark: 3D world coordinates (meters)
+   - NormalizedLandmark: 2D normalized coordinates [0,1]
+   - Landmarks: List of Landmark
+   - NormalizedLandmarks: List of NormalizedLandmark
+   - PoseLandmarkerResult: Container with normalized + world landmarks + masks
+
+3. ANNOTATION SYSTEM
+   - PoseLandmarkerResultAnnotationController: Main result handler
+   - MultiPoseLandmarkListWithMaskAnnotation: Multi-pose visualization
+   - PoseLandmarkListAnnotation: Per-pose rendering with 33 landmarks + 32 connections
+   - Thread-safe with lock-based synchronization
+   - Supports immediate (DrawNow) and deferred (DrawLater) rendering
+
+4. SAMPLE SCENE COMPONENTS
+   - PoseLandmarkerRunner: Main orchestrator
+   - PoseLandmarkDetectionConfig: Configuration holder
+   - PoseLandmarkDetectionConfigWindow: UI for settings
+   - Complete pipeline from camera to visualization
+
+5. KEY FEATURES DISCOVERED
+   - Thread-safe result handling with locks
+   - Texture frame pooling (10 buffers)
+   - Async GPU readback support
+   - Segmentation mask overlay
+   - Z-depth visualization
+   - Left/right body color differentiation
+   - Skeleton connection drawing (32 connections)
+
+================================================================================
+                         DOCUMENTATION CREATED
+================================================================================
+
+Four comprehensive markdown documents totaling ~65KB:
+
+1. MEDIAPIPE_EXPLORATION_COMPLETE.md (20KB)
+   - Sections 1-3: Core classes and data structures
+   - Sections 4-5: Complete implementation details
+   - Sections 6-9: Configuration and usage notes
+   - Covers all 17 core files with full source code
+
+2. KEY_SOURCE_FILES.md (8.9KB)
+   - All 17 source files with absolute paths
+   - Purpose and responsibility of each file
+   - Key methods and properties
+   - Quick reference sections
+   - File statistics and line counts
+
+3. DATA_FLOW_AND_ARCHITECTURE.md (25KB)
+   - Complete pipeline diagram (10 sections)
+   - Class hierarchy visualization
+   - Thread safety patterns
+   - Landmark skeleton map (33 landmarks, 32 connections)
+   - Memory management and resource allocation
+   - Synchronization patterns
+
+4. INDEX.md (11KB)
+   - Overview of all documentation
+   - File listing with descriptions
+   - Key concepts explained
+   - Usage guide for the documents
+   - Repository information
+
+================================================================================
+                            KEY FILES ANALYZED
+================================================================================
+
+DETECTION CORE (3 files):
+  - PoseLandmarker.cs (297 lines)
+  - PoseLandmarkerResult.cs (84 lines)
+  - PoseLandmarkerOptions.cs (123 lines)
+
+DATA STRUCTURES (1 file):
+  - Landmark.cs (303 lines) - Contains 4 landmark structs
+
+ANNOTATION CONTROLLERS (3 files):
+  - PoseLandmarkerResultAnnotationController.cs (62 lines)
+  - PoseLandmarkListAnnotationController.cs (46 lines)
+  - PoseWorldLandmarkListAnnotationController.cs (54 lines)
+
+VISUALIZATION (5 files):
+  - MultiPoseLandmarkListWithMaskAnnotation.cs (187 lines)
+  - PoseLandmarkListAnnotation.cs (307 lines)
+  - PoseLandmarkListWithMaskAnnotation.cs (71 lines)
+  - AnnotationController.cs (113 lines)
+  - HierarchicalAnnotation.cs (97 lines)
+  - ListAnnotation.cs (123 lines)
+
+SAMPLE IMPLEMENTATION (3 files):
+  - PoseLandmarkerRunner.cs (180 lines)
+  - PoseLandmarkDetectionConfig.cs (75 lines)
+  - PoseLandmarkDetectionConfigWindow.cs (171 lines)
+
+INFRASTRUCTURE (2 files):
+  - VisionTaskApiRunner.cs (61 lines)
+
+TOTAL: 17 files, ~2,354 lines of code
+
+================================================================================
+                         SYSTEM ARCHITECTURE
+================================================================================
+
+INPUT LAYER:
+  ImageSource → TextureFramePool → Image Building (GPU/CPU/CPUAsync)
+
+DETECTION LAYER:
+  PoseLandmarker task with 3 running modes
+  Output: PoseLandmarkerResult (normalized + world landmarks + masks)
+
+ANNOTATION LAYER:
+  PoseLandmarkerResultAnnotationController
+  Thread-safe result handling with CloneTo()
+
+VISUALIZATION LAYER:
+  MultiPoseLandmarkListWithMaskAnnotation
+  ├─ 33 landmarks rendered as circles
+  ├─ 32 skeleton connections rendered as lines
+  └─ Optional segmentation mask overlay
+
+OUTPUT LAYER:
+  Unity Canvas → Screen (via RawImage + Annotation rendering)
+
+================================================================================
+                          LANDMARK STRUCTURE
+================================================================================
+
+Total Landmarks: 33
+Left Landmarks: 16 indices
+Right Landmarks: 16 indices
+Connections: 32 (limbs)
+
+Landmark Groups:
+  - Face: 0-10
+  - Arms/Hands: 11-22
+  - Torso/Hips: 23-28
+  - Legs: 29-32
+
+Each landmark contains:
+  - Position (x, y, z)
+  - Visibility score [0,1]
+  - Presence score [0,1]
+  - Name (optional)
+
+================================================================================
+                        CONFIGURATION OPTIONS
+================================================================================
+
+Running Modes:
+  1. IMAGE: Single frame, synchronous
+  2. VIDEO: Frame sequence with timestamps
+  3. LIVE_STREAM: Continuous async (may drop frames)
+
+Image Read Modes:
+  1. GPU: Direct GPU copy (Android + OpenGL ES3)
+  2. CPU: Synchronous CPU readback
+  3. CPUAsync: Asynchronous GPU readback (default)
+
+Model Variants:
+  1. Lite: Fastest, least accurate
+  2. Full: Balanced (default)
+  3. Heavy: Slowest, most accurate
+
+Confidence Thresholds (all default to 0.5):
+  - minPoseDetectionConfidence
+  - minPosePresenceConfidence
+  - minTrackingConfidence
+
+Options:
+  - numPoses (default: 1)
+  - outputSegmentationMasks (default: false)
+  - Delegate: CPU or GPU
+
+================================================================================
+                        THREAD SAFETY MECHANISMS
+================================================================================
+
+Lock-based Synchronization:
+  - _currentTargetLock object in PoseLandmarkerResultAnnotationController
+  - Protects result cloning and mask reading
+  - Release happens after UpdateCurrentTarget()
+
+Stale Flag Pattern:
+  - isStale flag indicates changed data
+  - LateUpdate() checks flag on main thread
+  - SyncNow() always runs on main thread only
+
+Safe Data Copying:
+  - CloneTo() method for safe result transfer
+  - Segmentation masks cleared after reading
+  - No shared mutable state between threads
+
+================================================================================
+                        MEMORY MANAGEMENT
+================================================================================
+
+Pre-allocation:
+  - Results allocated via PoseLandmarkerResult.Alloc()
+  - TextureFramePool pre-allocates 10 frame buffers
+  - Reduces garbage collection overhead
+
+Per-Frame Cleanup:
+  - Segmentation masks explicitly disposed
+  - DisposeAllMasks() called after each frame
+  - Prevents GPU memory leaks
+
+Resource Cleanup:
+  - taskApi?.Close() on shutdown
+  - _textureFramePool?.Dispose()
+  - Annotation objects destroyed in OnDestroy()
+
+================================================================================
+                         VISUALIZATION SYSTEM
+================================================================================
+
+Colors:
+  - Left body landmarks: Green
+  - Right body landmarks: Green
+  - Skeleton connections: White
+  - Segmentation mask: Blue
+  - All configurable
+
+Landmark Rendering:
+  - Radius: 15.0 units (configurable)
+  - 33 circles at landmark positions
+  - Z-depth visualization support
+
+Skeleton Rendering:
+  - 32 line connections between landmarks
+  - Width: 1.0 (configurable)
+  - Dynamic redrawn each frame
+
+Segmentation Mask:
+  - Optional overlay on screen
+  - Threshold: 0.9 (configurable)
+  - Blended with base color
+
+================================================================================
+                      PERFORMANCE CONSIDERATIONS
+================================================================================
+
+GPU Mode:
+  - Only available on Android with OpenGL ES3
+  - Fastest frame reading
+  - Requires GpuResources initialization
+
+CPUAsync Mode (Default):
+  - Asynchronous GPU readback
+  - Prevents frame drops
+  - Best for performance
+
+Segmentation Output:
+  - Optional for performance
+  - Requires GPU memory
+  - Recommended disabled if not needed
+
+Model Selection:
+  - Lite: Best for performance
+  - Full: Good balance
+  - Heavy: Best accuracy
+
+================================================================================
+                        QUICK START REFERENCE
+================================================================================
+
+1. Initialize:
+   var config = new PoseLandmarkDetectionConfig();
+   var options = config.GetPoseLandmarkerOptions(resultCallback);
+   var landmarker = PoseLandmarker.CreateFromOptions(options);
+
+2. Detect (IMAGE mode):
+   if (landmarker.TryDetect(image, options, ref result))
+   {
+       controller.DrawNow(result);
+   }
+
+3. Detect (LIVE_STREAM mode):
+   landmarker.DetectAsync(image, timestamp, options);
+   // Result arrives in resultCallback
+
+4. Access Results:
+   var poseLandmarks = result.poseLandmarks;      // List<NormalizedLandmarks>
+   var worldLandmarks = result.poseWorldLandmarks; // List<Landmarks>
+   var masks = result.segmentationMasks;           // List<Image>
+
+5. Cleanup:
+   foreach (var mask in result.segmentationMasks)
+       mask.Dispose();
+
+================================================================================
+                            FILES CREATED
+================================================================================
+
+In /home/user/test/:
+
+1. MEDIAPIPE_EXPLORATION_COMPLETE.md (20KB)
+   - Complete technical documentation
+   - All 9 sections with full details
+
+2. KEY_SOURCE_FILES.md (8.9KB)
+   - File reference guide
+   - Quick lookup by file type
+
+3. DATA_FLOW_AND_ARCHITECTURE.md (25KB)
+   - Visual diagrams and flows
+   - 10 detailed sections
+
+4. INDEX.md (11KB)
+   - Navigation guide
+   - How to use documents
+
+5. EXPLORATION_SUMMARY.txt (this file)
+   - High-level overview
+   - Key findings summary
+
+================================================================================
+                          EXPLORATION COMPLETE
+================================================================================
+
+Status: COMPLETE
+Files Analyzed: 17 core files
+Total Lines Analyzed: ~2,354
+Documentation Generated: ~65KB across 4 markdown files
+Repository: https://github.com/homuler/MediaPipeUnityPlugin
+
+All source code has been thoroughly analyzed and documented.
+Complete code listings are available in the markdown documents.
+
+For detailed information, start with:
+  1. INDEX.md - Navigation and overview
+  2. DATA_FLOW_AND_ARCHITECTURE.md - Visual diagrams
+  3. MEDIAPIPE_EXPLORATION_COMPLETE.md - Complete technical docs
+  4. KEY_SOURCE_FILES.md - Quick reference
+
+================================================================================
